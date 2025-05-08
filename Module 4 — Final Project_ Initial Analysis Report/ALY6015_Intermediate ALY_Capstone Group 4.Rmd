@@ -1,0 +1,147 @@
+---
+
+---
+
+<B>
+<FONT SIZE = 4, color = "blue">
+<center><BR>
+Chicago Police Department: Violence Reduction - ShotSpotter Alerts
+<BR>
+<FONT SIZE = 3, color = "black">
+ALY6015: INTERMEDIATE ANALYTICS
+<BR>
+<FONT SIZE = 2, color = "black">
+Northeastern University
+<BR>
+<FONT SIZE = 2, color = "black">
+</B>
+Capstone Group 4: Devika, Jayakumar, Sagar
+<BR>
+<FONT SIZE = 2, color = "black">
+Instructor Name: Prof. Zhi (Richard) He
+<BR>
+<FONT SIZE = 2, color = "black">
+Date: 15th Mar 2024
+<BR></center></B>
+
+<B>
+<FONT SIZE = 3, color = "black">
+Loading Dataset
+</B><BR>
+
+```{r message=FALSE, warning=FALSE}
+
+#library
+library(readxl)
+library(readr)
+library(ggplot2)
+library(dplyr)
+
+#dataset
+Violence_Reduction_Shotspotter_Alerts <- read_csv("~/NEU Grad docs/ALY6015/Capstone Project/Violence_Reduction_-_Shotspotter_Alerts.csv")
+
+#glimpse
+head(Violence_Reduction_Shotspotter_Alerts)
+
+```
+
+<B>
+<FONT SIZE = 3, color = "black">
+Dataset - Descriptive Statistics Summary
+</B><BR>
+
+```{r message=FALSE, warning=FALSE}
+
+# Get a summary of the dataset
+summary(Violence_Reduction_Shotspotter_Alerts)
+
+```
+
+<B>
+<FONT SIZE = 3, color = "black">
+Dataset - Structure
+</B><BR>
+
+```{r message=FALSE, warning=FALSE}
+
+str(Violence_Reduction_Shotspotter_Alerts)
+
+```
+
+<B>
+<FONT SIZE = 3, color = "black">
+Data Cleaning
+</B><BR>
+
+```{r }
+
+# Check for missing values
+sum(is.na(Violence_Reduction_Shotspotter_Alerts))
+
+# Remove rows with any missing value
+data_clean <- na.omit(Violence_Reduction_Shotspotter_Alerts)
+
+# Check again for missing values after cleaning
+sum(is.na(data_clean))
+
+```
+<B>
+<FONT SIZE = 3, color = "black">
+Exploratory Data Analysis
+</B><BR>
+
+```{r }
+
+#boxplot of gunshot rounds
+boxplot(Violence_Reduction_Shotspotter_Alerts$ROUNDS, main="Box Plot of Rounds in Shotspotter Alerts", ylab="Rounds")
+
+#bar graph of frequency of incidents
+ggplot(Violence_Reduction_Shotspotter_Alerts, aes(x=INCIDENT_TYPE_DESCRIPTION)) + 
+  geom_bar(fill="blue") + 
+  theme_minimal() +
+  labs(title="Frequency of Incident Types", x="Incident Type", y="Count") +
+  scale_x_discrete(labels = c("Gunshot / Cracker", "Multi Gunshots", "Single Gunshot")) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+```{r }
+
+#bar plot of total counts of gunshots in an hourly basis
+ggplot(Violence_Reduction_Shotspotter_Alerts, aes(x = HOUR, y = ROUNDS)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Total Count of Gunshots in hourly basis", x = "Hour", y = "ShotSpotter Alert") +
+  theme_minimal() + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r }
+
+#converting date format
+Violence_Reduction_Shotspotter_Alerts$DATE_CH <- as.POSIXct(Violence_Reduction_Shotspotter_Alerts$DATE, format = "%m/%d/%Y %H:%M")
+
+#cross verification of date column
+head(Violence_Reduction_Shotspotter_Alerts)
+
+```
+
+
+```{r }
+#time series graph
+ggplot(Violence_Reduction_Shotspotter_Alerts, aes(x = DATE_CH, y = ROUNDS)) +
+  geom_line() + 
+  labs(title = "Time Series of Gunshot Rounds", x = "Year", y = "ShotSpotter Alert") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r }
+
+# R code for scatter plot
+plot(Violence_Reduction_Shotspotter_Alerts$LONGITUDE, Violence_Reduction_Shotspotter_Alerts$LATITUDE, main="Geographical Distribution of Shotspotter Alerts", xlab="Longitude", ylab="Latitude", pch=19, col=rgb(0, 0, 1, 0.5))
+
+```
+

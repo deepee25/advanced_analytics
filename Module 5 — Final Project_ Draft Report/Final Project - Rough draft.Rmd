@@ -1,0 +1,170 @@
+---
+title: ''
+output: html_document
+---
+
+```{r message=FALSE, warning=FALSE}
+
+#library
+library(readxl)
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(pROC)
+library(caret)
+library(nnet)
+library(glmnet)
+library(rpart)
+
+data <- read_csv("~/NEU Grad docs/ALY6015/Capstone Project/Violence_Reduction_-_Shotspotter_Alerts.csv")
+
+```
+
+```{r}
+
+# Removing rows with missing values
+cleaned_data <- na.omit(data)
+
+```
+
+```{r}
+
+# Transform INCIDENT_TYPE_DESCRIPTION to a numerical column, Incident_Type_Code
+cleaned_data <- cleaned_data %>%
+  mutate(Incident_Type_Code = case_when(
+    INCIDENT_TYPE_DESCRIPTION == "SINGLE GUNSHOT" ~ 0,
+    INCIDENT_TYPE_DESCRIPTION == "MULTIPLE GUNSHOTS" ~ 1,
+    INCIDENT_TYPE_DESCRIPTION %in% c("GUNSHOT OR FIRECRACKER") ~ 1,
+  ))
+
+# Assuming the DATE column is in a character format
+cleaned_data$DATE <- as.Date(cleaned_data$DATE, format = "%Y-%m-%d")
+
+cleaned_data$ZIP_CODE <- as.numeric(cleaned_data$ZIP_CODE)
+
+
+
+```
+
+<B>
+<FONT SIZE = 2, color = "black">
+DATA PARTITION
+</B><BR>
+
+```{r warning=FALSE}
+set.seed(20353)
+#partitioning dataset into train and test
+# Create separate partitions for columns with different data types
+train_indices <- createDataPartition(cleaned_data$Incident_Type_Code, p = 0.70, list = FALSE, times = 1)
+train_viol_split <- cleaned_data[train_indices, ]
+test_viol_split = cleaned_data[-train_indices,]
+
+```
+
+
+<B>
+<FONT SIZE = 2, color = "black">
+GLM - LOGISTIC REGRESSION
+</B><BR>
+
+```{r warning=FALSE}
+# Fit the GLM model
+glm_model <- glm(Incident_Type_Code ~ ZIP_CODE + MONTH + DAY_OF_WEEK + ROUNDS + LATITUDE + LONGITUDE, data = train_viol_split, family = binomial)
+
+# Summary of the model
+summary(glm_model)
+
+# Obtain predictions on the test set
+predicted_probabilities_test <- predict(glm_model, newdata = test_viol_split, type = "response")
+
+# Convert predicted probabilities to predicted classes (0 or 1)
+predicted_classes_test <- ifelse(predicted_probabilities_test > 0.5, 1, 0)
+
+# Create the confusion matrix for test set
+conf_matrix_test <- table(Actual = test_viol_split$Incident_Type_Code, Predicted = predicted_classes_test)
+conf_matrix_test
+
+# Calculate ROC curve and AUC for test set
+roc_curve_test <- roc(test_viol_split$Incident_Type_Code, predicted_probabilities_test)
+auc_test <- auc(roc_curve_test)
+
+# Plot ROC curve for training set
+plot(roc_curve_test, main = "ROC Curve - Test Set", col = "blue")
+legend("bottomright", legend = paste("AUC =", round(auc_test, 3)), col = "blue", lty = 1, cex = 0.8)
+
+```
+<B>
+<FONT SIZE = 2, color = "black">
+LINEAR REGRESSION
+</B><BR>
+
+
+```{r}
+
+# Fit the linear regression model
+linear_model <- lm(Incident_Type_Code ~ ZIP_CODE + MONTH + DAY_OF_WEEK + ROUNDS + LATITUDE + LONGITUDE, data = train_viol_split)
+
+# Summary of the model
+summary(linear_model)
+
+# Make predictions on the test set
+linear_predictions <- predict(linear_model, newdata = test_viol_split, type = "response")
+
+# Load the pROC package for ROC curve calculation (if not already loaded)
+# install.packages("pROC")  # Install only if not already installed
+# library(pROC)
+
+# Calculate ROC curve
+roc_curve <- roc(test_viol_split$Incident_Type_Code, linear_predictions)
+
+# Calculate AUC
+auc_value <- auc(roc_curve)
+
+
+# Plot ROC curve for training set
+plot(roc_curve, main = "ROC Curve - Test Set", col = "blue")
+legend("bottomright", legend = paste("AUC =", round(auc_value, 3)), col = "blue", lty = 1, cex = 0.8)
+
+
+```
+
+<B>
+<FONT SIZE = 2, color = "black">
+DECISION TREE - MODEL
+</B><BR>
+
+```{r message=FALSE,warning=FALSE}
+
+# Fitting a Decision Tree model
+decision_tree_model <- rpart(Incident_Type_Code ~ ZIP_CODE + MONTH + DAY_OF_WEEK + ROUNDS + LATITUDE + LONGITUDE, data = train_viol_split, method="class")
+
+# Viewing the decision tree
+print(decision_tree_model)
+
+# Make predictions on the test set
+predictions <- predict(decision_tree_model, newdata = test_viol_split, type = "prob")
+
+# Extract probabilities for the positive class
+predicted_probabilities <- predictions[, "1"]
+
+# Calculate ROC curve
+roc_curve1 <- roc(ifelse(test_viol_split$Incident_Type_Code == "1", 1, 0), predicted_probabilities)
+
+# Calculate AUC
+auc_value1 <- auc(roc_curve1)
+
+# Plot ROC curve for training set
+plot(roc_curve1, main = "ROC Curve - Test Set", col = "blue")
+legend("bottomright", legend = paste("AUC =", round(auc_value1, 3)), col = "blue", lty = 1, cex = 0.8)
+
+# Convert predicted probabilities to binary predictions based on a threshold (e.g., 0.5)
+DT_predictions <- ifelse(predicted_probabilities >= 0.5, 1, 0)
+
+# Create the confusion matrix
+confusion_matrix <- table(DT_predictions, test_viol_split$Incident_Type_Code)
+
+# Print the confusion matrix
+print(confusion_matrix)
+
+```
+
